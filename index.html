@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Relatório da Bolsa do Dia {{ data }}</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				background-color: #121212;
+				color: #e0e0e0;
+				margin: 0;
+				padding: 0;
+			}
+			.container {
+				margin: 20px auto;
+				padding: 20px;
+				max-width: 100%;
+				background-color: #1e1e1e;
+				border-radius: 8px;
+				border: 1px solid #333;
+			}
+			h1,
+			h2,
+			h3,
+			h4,
+			p {
+				color: #f0f0f0;
+			}
+			h1 {
+				font-size: 24px;
+				margin-bottom: 20px;
+			}
+			h2 {
+				font-size: 20px;
+				margin-top: 20px;
+				margin-bottom: 10px;
+			}
+			h3 {
+				font-size: 18px;
+				margin-top: 20px;
+				margin-bottom: 10px;
+			}
+			h4 {
+				font-size: 16px;
+			}
+			p {
+				font-size: 14px;
+				line-height: 1.6;
+				margin: 10px 0;
+			}
+			.graph {
+				margin-top: 20px;
+				text-align: center;
+			}
+			.graph img {
+				width: 100%;
+				max-width: 600px; /* Ajuste o máximo tamanho para evitar imagens muito grandes */
+				height: auto; /* Mantém a proporção da imagem */
+				border-radius: 4px;
+			}
+			.news-list {
+				margin-top: 20px;
+			}
+			.news-item {
+				margin-bottom: 20px;
+				display: flex;
+				align-items: center;
+			}
+			.news-item img {
+				width: 80px;
+				height: 60px;
+				object-fit: cover;
+				border-radius: 4px;
+				margin-right: 10px;
+			}
+			.footer {
+				margin-top: 20px;
+				text-align: center;
+				font-size: 0.9em;
+				color: #bbb;
+			}
+			.button {
+				display: inline-block;
+				padding: 10px 20px;
+				margin: 5px;
+				text-decoration: none;
+				color: #fff;
+				border-radius: 4px;
+				font-weight: bold;
+				border: 1px solid transparent;
+			}
+			.button.is-link {
+				background-color: #007bff;
+				border-color: #007bff;
+			}
+			.button.is-info {
+				background-color: #17a2b8;
+				border-color: #17a2b8;
+			}
+			.button:hover {
+				opacity: 0.9;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>Relatório da Bolsa do Dia {{ data }}</h1>
+
+			<!-- Corpo -->
+			<div class="content">
+				{% for info in infos %}
+				<div class="ativo-section" style="text-align: center">
+					<!-- Subtítulo: Ativo -->
+					<h2>Ativo: {{ info.ativo }}</h2>
+
+					<!-- Descrição -->
+					<p>
+						{{ info.descricao }}
+						<span style="color:{{ info.color }}"
+							>{{ info.retorno }}</span
+						>
+					</p>
+
+					<!-- Gráfico -->
+					<div class="graph">
+						<figure class="image">
+							<img
+								src="cid:{{ info.cid_grafico }}"
+								alt="Gráfico do Ativo"
+							/>
+						</figure>
+					</div>
+				</div>
+				{% endfor %}
+
+				<!-- Notícias -->
+				<div class="news-list">
+					<h3>Principais Notícias:</h3>
+					{% for news_item in news %}
+					<div class="news-item">
+						<figure class="image">
+							<img
+								src="{{ news_item.image }}"
+								alt="Imagem da Notícia"
+							/>
+						</figure>
+						<h4>
+							<a
+								href="{{ news_item.link }}"
+								target="_blank"
+								style="color: #fff; text-decoration: none"
+								>{{ news_item.title }}</a
+							>
+						</h4>
+					</div>
+					{% endfor %}
+				</div>
+			</div>
+
+			<div class="footer">
+				<p>Autor: {{ autor }}</p>
+				<a href="{{ url_cancelamento }}" class="button is-link"
+					>Cancelar recebimento</a
+				>
+				<a href="{{ url_relatorio }}" class="button is-info"
+					>Ir para a página do relatório</a
+				>
+			</div>
+		</div>
+	</body>
+</html>
