@@ -34,7 +34,7 @@ jobs:
               run: |
                   git config --local user.email "action@github.com"
                   git config --local user.name "GitHub Action"
-                  git add docs/index.html
+                  git add graphs/ docs/ticker_data.json
                   git diff --quiet || git commit -m "Update GitHub Pages HTML"
 
             - name: Push changes to main (for GitHub Pages)
