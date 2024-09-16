@@ -38,7 +38,7 @@ jobs:
                   git diff --quiet || git commit -m "Update GitHub Pages HTML"
 
             - name: Push changes to main (for GitHub Pages)
-              uses: ad-m/github-push-action@v0.6.0
+              uses: ad-m/github-push-action@master
               with:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
                   branch: main
