@@ -6,76 +6,121 @@ from jinja2 import Environment, FileSystemLoader
 import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
-import mplcyberpunk
 import pathlib
 import requests
 from bs4 import BeautifulSoup
-import schedule
-import time
+import mplcyberpunk
+from typing import List, Tuple, Dict
+import yaml
+from datetime import datetime, timedelta
+import os
 
 
-# Função para gerar gráficos
-def generate_graphs():
+def take_data(tickers: List[str]) -> Tuple[pd.DataFrame, Dict[str, str]]:
+    """
+    Downloads and processes market data for the provided tickers using yfinance.
+
+    Args:
+        tickers (List[str]): List of tickers to download market data for.
+
+    Returns:
+        Tuple[pd.DataFrame, Dict[str, str]]: DataFrame of the market data and a dictionary of returns for each ticker.
+    """
+    market_data = yf.download(tickers, period="6mo")
+    market_data = market_data["Adj Close"].dropna()
+
+    # Calculate daily returns
+    daily_returns = market_data.pct_change()
+
+    returns = {}
+    for ticker in tickers:
+        returns[ticker] = f"{round(daily_returns[ticker].iloc[-1] * 100, 2)}%"
+
+    return market_data, returns
+
+
+def generate_graphs(data: pd.DataFrame, tickers: List[str]) -> None:
+    """
+    Generates and saves line graphs for each ticker in the provided data.
+
+    Args:
+        data (pd.DataFrame): The market data.
+        tickers (List[str]): List of tickers to generate graphs for.
+
+    Returns:
+        None
+    """
     graph_path = pathlib.Path("graphs")
     graph_path.mkdir(exist_ok=True)
 
-    tickers = ["^BVSP", "^GSPC", "BRL=X"]
-    dados_mercado = yf.download(tickers, period="6mo")
-    dados_mercado = dados_mercado["Adj Close"]
-    dados_mercado = dados_mercado.dropna()
-    dados_mercado.columns = ["DOLAR", "IBOVESPA", "S&P500"]
-
     plt.style.use("cyberpunk")
-    plt.plot(dados_mercado["IBOVESPA"])
-    plt.title("IBOVESPA")
-    plt.savefig(graph_path.joinpath("ibovespa.png"))
-    plt.clf()
 
-    plt.plot(dados_mercado["DOLAR"])
-    plt.title("DOLAR")
-    plt.savefig(graph_path.joinpath("dolar.png"))
-    plt.clf()
+    temp_data = data
+    temp_data.index = temp_data.index.tz_localize(None)
+    data_start = datetime.utcnow() - timedelta(months=1)
+    temp_data = temp_data.loc[temp_data.index >= data_start]
 
-    plt.plot(dados_mercado["S&P500"])
-    plt.title("S&P500")
-    plt.savefig(graph_path.joinpath("sp500.png"))
-    plt.clf()
-
-    retornos_diarios = dados_mercado.pct_change()
-    retorno_dolar = str(round(retornos_diarios["DOLAR"].iloc[-1] * 100, 2)) + "%"
-    retorno_ibovespa = str(round(retornos_diarios["IBOVESPA"].iloc[-1] * 100, 2)) + "%"
-    retorno_sp = str(round(retornos_diarios["S&P500"].iloc[-1] * 100, 2)) + "%"
-
-    return retorno_dolar, retorno_ibovespa, retorno_sp
+    for ticker in tickers:
+        plt.plot(temp_data[ticker])
+        plt.title(ticker)
+        plt.savefig(graph_path.joinpath(f"{ticker.lower()}.png"))
+        plt.clf()
 
 
-# Função para pegar notícias
-def get_news():
+def get_news() -> List[Dict[str, str]]:
+    """
+    Fetches the top 5 financial news from Yahoo Finance RSS feed.
+
+    Returns:
+        List[Dict[str, str]]: A list of dictionaries containing news title, link, and image URL.
+    """
     url = "https://finance.yahoo.com/news/rssindex"
     page = requests.get(url)
     soup = BeautifulSoup(page.content, "lxml-xml")
-    all_news = [news for news in soup.find_all("item")[:5]]
-    formated_news = []
+    all_news = soup.find_all("item")[:5]
+
+    formatted_news = []
     for news in all_news:
-        formated_news.append(
+        formatted_news.append(
             {
                 "title": news.find("title").text,
                 "link": news.find("link").text,
-                "image": news.find("media:content")["url"],
+                "image": (
+                    news.find("media:content")["url"]
+                    if news.find("media:content")
+                    else ""
+                ),
             }
         )
-    return formated_news
+    return formatted_news
 
 
-# Função para criar e enviar e-mail
-def send_email(subject, html_content, image_paths, image_cids, recipients):
+def send_email(
+    subject: str,
+    html_content: str,
+    image_paths: List[str],
+    image_cids: List[str],
+    recipients: List[str],
+) -> None:
+    """
+    Sends an email with the specified subject, HTML content, and attached images.
+
+    Args:
+        subject (str): Email subject.
+        html_content (str): HTML content of the email.
+        image_paths (List[str]): Paths to image files.
+        image_cids (List[str]): Corresponding CIDs for inline images.
+        recipients (List[str]): List of recipient email addresses.
+
+    Returns:
+        None
+    """
     msg = MIMEMultipart("related")
     msg["Subject"] = subject
     msg["To"] = ", ".join(recipients)
     msg["From"] = "vicenters10@gmail.com"
     msg.attach(MIMEText(html_content, "html"))
 
-    # Adiciona as imagens como anexos e define CIDs
     for image_path, cid in zip(image_paths, image_cids):
         with open(image_path, "rb") as img_file:
             img_data = img_file.read()
@@ -83,76 +128,118 @@ def send_email(subject, html_content, image_paths, image_cids, recipients):
         image.add_header("Content-ID", f"<{cid}>")
         msg.attach(image)
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smpt_server:
-        smpt_server.login("vicenters10@gmail.com", "ulog tjxg wkub qfxm")
-        smpt_server.sendmail("vicenters10@gmail.com", recipients, msg.as_string())
+    # Try to retrieve secret
+    try:
+        SOME_SECRET = os.environ["SOME_SECRET"]
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp_server:
+            smtp_server.login(
+                "vicenters10@gmail.com", SOME_SECRET  # "ulog tjxg wkub qfxm"
+            )  # Insert your password here
+            smtp_server.sendmail("vicenters10@gmail.com", recipients, msg.as_string())
+    except Exception as e:
+        print(f"An error ocurred:\n{e}")
 
 
-def process():
-    # Geração do gráfico e coleta de notícias
-    retorno_dolar, retorno_ibovespa, retorno_sp = generate_graphs()
-    formated_news = get_news()
+def get_ticker_name(ticker: str) -> str:
+    """
+    Gets the full name of the asset from a given ticker symbol.
 
-    # Dados para o template
-    dados = {
-        "data": "12/09/2024",
-        "infos": [
-            {
-                "ativo": "S&P500",
-                "descricao": f"O retorno do S&P500 foi",
-                "retorno": retorno_sp,
-                "color": "green" if float(retorno_sp.replace("%", "")) > 0 else "red",
-                "cid_grafico": "sp500.png",
-            },
-            {
-                "ativo": "Dolar",
-                "descricao": f"O retorno do Dolar foi",
-                "retorno": retorno_dolar,
-                "color": (
-                    "green" if float(retorno_dolar.replace("%", "")) > 0 else "red"
-                ),
-                "cid_grafico": "dolar.png",
-            },
-            {
-                "ativo": "Ibovespa",
-                "descricao": f"O retorno do Ibovespa foi",
-                "retorno": retorno_ibovespa,
-                "color": (
-                    "green" if float(retorno_ibovespa.replace("%", "")) > 0 else "red"
-                ),
-                "cid_grafico": "ibovespa.png",
-            },
-        ],
-        "news": formated_news,
+    Args:
+        ticker (str): The ticker symbol.
+
+    Returns:
+        str: The full name of the asset.
+    """
+    ticker_data = yf.Ticker(ticker)
+    info = ticker_data.info
+    return info.get("longName", ticker)
+
+
+def generate_data_dict(
+    tickers: List[str], returns: Dict[str, str], news: List[Dict[str, str]]
+) -> Dict:
+    """
+    Generates the dictionary to be used for email template rendering.
+
+    Args:
+        tickers (List[str]): List of tickers.
+        returns (Dict[str, str]): Dictionary with the returns of each ticker.
+        news (List[Dict[str, str]]): List of news articles.
+
+    Returns:
+        Dict: The data dictionary used for the template.
+    """
+    data_dict = {
+        "data": datetime.now().strftime("%d/%m/%Y"),
+        "infos": [],
+        "news": news,
         "autor": "Ryuvi",
         "url_cancelamento": "URL_CANCELAMENTO",
         "url_relatorio": "URL_RELATORIO",
     }
 
-    # Renderiza o template
+    for ticker in tickers:
+        ticker_name = get_ticker_name(ticker)
+        info = {
+            "ativo": ticker_name,
+            "descricao": f"O retorno do {ticker} foi",
+            "retorno": returns[ticker],
+            "color": "green" if float(returns[ticker].replace("%", "")) > 0 else "red",
+            "cid_grafico": f"{ticker.lower()}.png",
+        }
+        data_dict["infos"].append(info)
+
+    return data_dict
+
+
+def load_tickers_from_yaml(yaml_file: str) -> List[str]:
+    """
+    Loads the list of tickers from a YAML file.
+
+    Args:
+        yaml_file (str): Path to the YAML file.
+
+    Returns:
+        List[str]: List of tickers.
+    """
+    with open(yaml_file, "r") as file:
+        data = yaml.safe_load(file)
+        return data.get("tickers", [])
+
+
+def main() -> None:
+    """
+    Main function to process data, generate graphs, get news, and send an email report.
+
+    Returns:
+        None
+    """
+    # Define the list of tickers
+    files = os.listdir(".")
+    target_file = "tickers.yaml"
+    tickers = load_tickers_from_yaml(files[files.index(target_file)])
+
+    # Fetch data and generate graphs
+    market_data, returns = take_data(tickers)
+    generate_graphs(market_data, tickers)
+    news = get_news()
+
+    # Prepare data for the email template
+    data_dict = generate_data_dict(tickers, returns, news)
+
+    # Render HTML template
     env = Environment(loader=FileSystemLoader("."))
     template = env.get_template("index.html")
-    html_content = template.render(dados)
+    html_content = template.render(data_dict)
 
-    # Define o assunto e os destinatários
-    subject = f'Relatório da bolsa do dia {dados["data"]}'
+    # Define email details and send the email
+    subject = f"Relatório da bolsa do dia {data_dict['data']}"
     recipients = ["vicenters10@gmail.com"]
-
-    # Envia o e-mail
-    image_paths = ["graphs/sp500.png", "graphs/dolar.png", "graphs/ibovespa.png"]
-    image_cids = ["sp500.png", "dolar.png", "ibovespa.png"]
+    image_paths = [f"graphs/{ticker.lower()}.png" for ticker in tickers]
+    image_cids = [f"{ticker.lower()}.png" for ticker in tickers]
 
     send_email(subject, html_content, image_paths, image_cids, recipients)
 
 
-def main():
-    # Agendar a execução do processo todo dia às 12h
-    schedule.every().day.at("12:00").do(process)
-
-    # Manter o script rodando para verificar o agendamento a cada minuto
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
-
-if __name__ == '__main__':
-    process()
+if __name__ == "__main__":
+    main()
