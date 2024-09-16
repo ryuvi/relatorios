@@ -14,6 +14,7 @@ from typing import List, Tuple, Dict
 import yaml
 from datetime import datetime, timedelta
 import os
+import json
 
 
 def take_data(tickers: List[str]) -> Tuple[pd.DataFrame, Dict[str, str]]:
@@ -57,14 +58,16 @@ def generate_graphs(data: pd.DataFrame, tickers: List[str]) -> None:
 
     temp_data = data
     temp_data.index = temp_data.index.tz_localize(None)
-    data_start = datetime.utcnow() - timedelta(months=1)
+    data_start = datetime.utcnow() - timedelta(days=31)
     temp_data = temp_data.loc[temp_data.index >= data_start]
 
     for ticker in tickers:
-        plt.plot(temp_data[ticker])
-        plt.title(ticker)
-        plt.savefig(graph_path.joinpath(f"{ticker.lower()}.png"))
+        fig, ax = plt.subplots(figsize=(16, 16))
+        ax.plot(temp_data[ticker])
+        ax.set_title(ticker)
+        plt.savefig(graph_path.joinpath(f"{ticker.lower()}.png"), dpi=300)
         plt.clf()
+        plt.close(fig)
 
 
 def get_news() -> List[Dict[str, str]]:
@@ -133,7 +136,7 @@ def send_email(
         SOME_SECRET = os.environ["SOME_SECRET"]
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp_server:
             smtp_server.login(
-                "vicenters10@gmail.com", SOME_SECRET  # "ulog tjxg wkub qfxm"
+                "vicenters10@gmail.com", SOME_SECRET
             )  # Insert your password here
             smtp_server.sendmail("vicenters10@gmail.com", recipients, msg.as_string())
     except Exception as e:
@@ -192,6 +195,34 @@ def generate_data_dict(
     return data_dict
 
 
+def generate_data_json(tickers: List[str], returns: Dict[str, str]) -> None:
+    """
+    Generates a dictionary with the necessary data and saves it as a JSON file.
+
+    Args:
+        tickers (List[str]): List of tickers.
+        returns (Dict[str, str]): Dictionary with the returns of each ticker.
+
+    Returns:
+        None
+    """
+    data = {}
+
+    for ticker in tickers:
+        ticker_name = get_ticker_name(ticker)
+        info = {
+            "ticker": ticker,
+            "ticker_fullname": ticker_name,
+            "ticker_graph_path": f"../graphs/{ticker.lower()}.png",
+            "ticker_return": returns[ticker],
+        }
+        data[ticker] = info
+
+    # Save the data as a JSON file
+    with open("docs/ticker_data.json", "w") as json_file:
+        json.dump(data, json_file)
+
+
 def load_tickers_from_yaml(yaml_file: str) -> List[str]:
     """
     Loads the list of tickers from a YAML file.
@@ -226,6 +257,8 @@ def main() -> None:
 
     # Prepare data for the email template
     data_dict = generate_data_dict(tickers, returns, news)
+
+    generate_data_json(tickers, returns)
 
     # Render HTML template
     env = Environment(loader=FileSystemLoader("."))
