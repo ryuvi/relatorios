@@ -38,7 +38,6 @@ jobs:
                   git diff --quiet || git commit -m "Update GitHub Pages HTML"
 
             - name: Push changes to main (for GitHub Pages)
-              uses: ad-m/github-push-action@master
-              with:
-                  github_token: ${{ secrets.GITHUB_TOKEN }}
-                  branch: main
+              run: |
+                  git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/ryuvi/relatorios.git
+                  git push origin main
