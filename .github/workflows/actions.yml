@@ -32,8 +32,8 @@ jobs:
 
             - name: Commit generated HTML to 'docs'
               run: |
-                  git config --local user.email "action@github.com"
-                  git config --local user.name "GitHub Action"
+                  git config --local user.email "vicenters10@gmail.com"
+                  git config --local user.name "Ryuvi"
                   git add graphs/ docs/ticker_data.json
                   git diff --quiet || git commit -m "Update GitHub Pages HTML"
 
