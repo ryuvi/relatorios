@@ -53,6 +53,8 @@ def generate_graphs(data: pd.DataFrame, tickers: List[str]) -> None:
     """
     graph_path = pathlib.Path("graphs")
     graph_path.mkdir(exist_ok=True)
+    publish_path = pathlib.Path("docs/images")
+    publish_path.mkdir(exist_ok=True)
 
     plt.style.use("cyberpunk")
 
@@ -65,7 +67,9 @@ def generate_graphs(data: pd.DataFrame, tickers: List[str]) -> None:
         fig, ax = plt.subplots(figsize=(16, 16))
         ax.plot(temp_data[ticker])
         ax.set_title(ticker)
-        plt.savefig(graph_path.joinpath(f"{ticker.lower()}.png"), dpi=300)
+        if ticker in ("^BVSP", "^GSPC", "BRL=X"):
+            plt.savefig(graph_path.joinpath(f"{ticker.lower()}.png"), dpi=300)
+        plt.savefig(publish_path.joinpath(f"{ticker.lower()}.png"), dpi=300)
         plt.clf()
         plt.close(fig)
 
@@ -182,6 +186,8 @@ def generate_data_dict(
     }
 
     for ticker in tickers:
+        if ticker not in ("^BVSP", "^GSPC", "BRL=X"):
+            continue
         ticker_name = get_ticker_name(ticker)
         info = {
             "ativo": ticker_name,
@@ -238,6 +244,25 @@ def load_tickers_from_yaml(yaml_file: str) -> List[str]:
         return data.get("tickers", [])
 
 
+def send_notification() -> None:
+    """
+    Function used to send notfication to cell phone
+
+    Returns:
+        None
+    """
+    requests.post(
+        "https://api.mynotifier.app/",
+        headers={"Accept: application/json", "Content-Type: application/json"},
+        data={
+            "apiKey": os.environ["NOTIFIER_KEY"],
+            "message": "New Report Available!",
+            "description": "A new report was generated, please see your email!",
+            "type": "success",
+        },
+    )
+
+
 def main() -> None:
     """
     Main function to process data, generate graphs, get news, and send an email report.
@@ -272,6 +297,7 @@ def main() -> None:
     image_cids = [f"{ticker.lower()}.png" for ticker in tickers]
 
     send_email(subject, html_content, image_paths, image_cids, recipients)
+    send_notification()
 
 
 if __name__ == "__main__":

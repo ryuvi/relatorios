@@ -11,6 +11,10 @@ jobs:
     build:
         runs-on: ubuntu-latest
 
+        permissions:
+            contents: write
+            pages: write
+
         steps:
             - name: Checkout repository content
               uses: actions/checkout@v2
@@ -28,6 +32,7 @@ jobs:
             - name: Run Python script and generate HTML
               env:
                   SOME_SECRET: ${{ secrets.SOME_SECRET }}
+                  NOTIFIER_KEY: ${{ secrets.NOTIFIER_KEY }}
               run: python main.py # Certifique-se de que este script gera um arquivo index.html na pasta 'docs'
 
             - name: Commit generated HTML to 'docs'
