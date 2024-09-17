@@ -253,8 +253,7 @@ def send_notification() -> None:
     """
     requests.post(
         "https://api.mynotifier.app/",
-        headers={"Accept: application/json", "Content-Type: application/json"},
-        data={
+        {
             "apiKey": os.environ["NOTIFIER_KEY"],
             "message": "New Report Available!",
             "description": "A new report was generated, please see your email!",
