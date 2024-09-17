@@ -1,185 +1,223 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Relatório da Bolsa do Dia {{ data }}</title>
+		<title>Dashboard by ryuvi</title>
+		<link
+			href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"
+			rel="stylesheet"
+		/>
 		<style>
 			body {
-				font-family: Arial, sans-serif;
-				background-color: #121212;
-				color: #e0e0e0;
-				margin: 0;
-				padding: 0;
-			}
-			.container {
-				margin: 20px auto;
-				padding: 20px;
-				max-width: 100%;
-				background-color: #1e1e1e;
-				border-radius: 8px;
-				border: 1px solid #333;
-			}
-			h1,
-			h2,
-			h3,
-			h4,
-			p {
-				color: #f0f0f0;
-			}
-			h1 {
-				font-size: 24px;
-				margin-bottom: 20px;
-			}
-			h2 {
-				font-size: 20px;
-				margin-top: 20px;
-				margin-bottom: 10px;
-			}
-			h3 {
-				font-size: 18px;
-				margin-top: 20px;
-				margin-bottom: 10px;
-			}
-			h4 {
-				font-size: 16px;
-			}
-			p {
-				font-size: 14px;
-				line-height: 1.6;
-				margin: 10px 0;
-			}
-			.graph {
-				margin-top: 20px;
-				text-align: center;
-			}
-			.graph img {
-				width: 100%;
-				max-width: 200px; /* Ajuste o máximo tamanho para evitar imagens muito grandes */
-				height: auto; /* Mantém a proporção da imagem */
-				border-radius: 4px;
-			}
-			.news-list {
-				margin-top: 20px;
-			}
-			.news-item {
-				margin-bottom: 20px;
 				display: flex;
-				align-items: center;
+				flex-direction: column;
+				min-height: 100vh;
 			}
-			.news-item img {
-				width: 80px;
-				height: 60px;
-				object-fit: cover;
-				border-radius: 4px;
-				margin-right: 10px;
+
+			.main-content {
+				flex: 1;
+				display: flex;
 			}
-			.footer {
-				margin-top: 20px;
+
+			.sidebar {
+				width: 250px;
+				background-color: #f5f5f5;
+				padding: 20px;
+				border-right: 1px solid #ddd;
+			}
+
+			.content-area {
+				flex: 1;
+				padding: 20px;
+			}
+
+			.columns {
+				margin: 0;
+			}
+
+			.ticker-info img {
+				max-width: 100%;
+				height: auto;
+				max-height: 500px;
+				object-fit: contain;
+			}
+
+			footer {
+				background-color: #f5f5f5;
+				padding: 10px;
 				text-align: center;
-				font-size: 0.9em;
-				color: #bbb;
+				border-top: 1px solid #ddd;
 			}
-			.button {
-				display: inline-block;
-				padding: 10px 20px;
-				margin: 5px;
-				text-decoration: none;
-				color: #fff;
-				border-radius: 4px;
-				font-weight: bold;
-				border: 1px solid transparent;
+
+			.alternate-rows .column:nth-child(odd) {
+				order: 1;
 			}
-			.button.is-link {
-				background-color: #007bff;
-				border-color: #007bff;
+
+			.alternate-rows .column:nth-child(even) {
+				order: 2;
 			}
-			.button.is-info {
-				background-color: #17a2b8;
-				border-color: #17a2b8;
-			}
-			.button:hover {
-				opacity: 0.9;
-			}
-			.table {
-				width: 100%;
-				border-spacing: 20px;
+
+			@media screen and (max-width: 768px) {
+				/* Para dispositivos móveis, forçar colunas para exibir uma abaixo da outra */
+				.alternate-rows .column {
+					order: unset;
+				}
 			}
 		</style>
 	</head>
 	<body>
-		<div class="container">
-			<h1>Relatório da Bolsa do Dia {{ data }}</h1>
-
-			<!-- Corpo -->
-			<div class="content">
-				<table class="table">
-					<tr>
-						{% for info in infos %}
-						<td style="text-align: center; vertical-align: top">
-							<!-- Subtítulo: Ativo -->
-							<h2>{{ info.ativo }}</h2>
-
-							<!-- Descrição -->
-							<p>
-								{{ info.descricao }}
-								<span style="color:{{ info.color }};"
-									>{{ info.retorno }}</span
-								>
-							</p>
-
-							<!-- Gráfico -->
-							<div class="graph">
-								<figure class="image">
-									<img
-										src="cid:{{ info.cid_grafico }}"
-										alt="Gráfico do Ativo"
-									/>
-								</figure>
-							</div>
-						</td>
-
-						{% if loop.index % 3 == 0 %}
-					</tr>
-					<tr>
-						<!-- Cria uma nova linha a cada três itens -->
-						{% endif %} {% endfor %}
-					</tr>
-				</table>
-
-				<!-- Notícias -->
-				<div class="news-list">
-					<h3>Principais Notícias:</h3>
-					{% for news_item in news %}
-					<div class="news-item">
-						<figure class="image">
-							<img
-								src="{{ news_item.image }}"
-								alt="Imagem da Notícia"
-							/>
-						</figure>
-						<h4>
-							<a
-								href="{{ news_item.link }}"
-								target="_blank"
-								style="color: #fff; text-decoration: none"
-								>{{ news_item.title }}</a
-							>
-						</h4>
-					</div>
-					{% endfor %}
+		<!-- Header -->
+		<header class="hero is-primary">
+			<div class="hero-body">
+				<div class="container">
+					<h1 class="title">Dashboard <small>by ryuvi</small></h1>
 				</div>
 			</div>
+		</header>
 
-			<div class="footer">
-				<p>Autor: {{ autor }}</p>
-				<a href="{{ url_cancelamento }}" class="button is-link"
-					>Cancelar recebimento</a
-				>
-				<a href="{{ url_relatorio }}" class="button is-info"
-					>Ir para a página do relatório</a
-				>
+		<div class="main-content">
+			<!-- Sidebar -->
+			<aside class="sidebar">
+				<h2 class="title is-4">Select a Ticker</h2>
+				<div class="select is-fullwidth">
+					<select id="tickers" onchange="updateTickerInfo()">
+						<option value="">--Select a Ticker--</option>
+					</select>
+				</div>
+			</aside>
+
+			<!-- Main Content Area -->
+			<div class="content-area">
+				<section class="section">
+					<div class="columns is-multiline alternate-rows">
+						<!-- Linha 1 - Infos do primeiro item | Gráfico do primeiro item -->
+						<div class="column is-half">
+							<div id="ticker-info-1" class="ticker-info">
+								<h2 id="ticker-name-1" class="title is-3"></h2>
+								<p
+									id="ticker-return-1"
+									class="subtitle is-5"
+								></p>
+							</div>
+						</div>
+						<div class="column is-half">
+							<figure>
+								<img
+									id="ticker-graph-1"
+									src=""
+									alt="Ticker Graph 1"
+								/>
+							</figure>
+						</div>
+
+						<!-- Linha 2 - Gráfico do segundo item | Infos do segundo item -->
+						<div class="column is-half">
+							<figure>
+								<img
+									id="ticker-graph-2"
+									src=""
+									alt="Ticker Graph 2"
+								/>
+							</figure>
+						</div>
+						<div class="column is-half">
+							<div id="ticker-info-2" class="ticker-info">
+								<h2 id="ticker-name-2" class="title is-3"></h2>
+								<p
+									id="ticker-return-2"
+									class="subtitle is-5"
+								></p>
+							</div>
+						</div>
+
+						<!-- Linha 3 - Infos do terceiro item | Gráfico do terceiro item -->
+						<div class="column is-half">
+							<div id="ticker-info-3" class="ticker-info">
+								<h2 id="ticker-name-3" class="title is-3"></h2>
+								<p
+									id="ticker-return-3"
+									class="subtitle is-5"
+								></p>
+							</div>
+						</div>
+						<div class="column is-half">
+							<figure>
+								<img
+									id="ticker-graph-3"
+									src=""
+									alt="Ticker Graph 3"
+								/>
+							</figure>
+						</div>
+					</div>
+				</section>
 			</div>
 		</div>
+
+		<!-- Footer -->
+		<footer>
+			<div class="content has-text-centered">
+				<p>Created with ❤️ by ryuvi</p>
+			</div>
+		</footer>
+
+		<script>
+			let tickerData = {};
+
+			// Load the ticker data from the JSON file
+			async function loadTickerData() {
+				const response = await fetch("ticker_data.json");
+				tickerData = await response.json();
+
+				// Populate the combobox with ticker options
+				const tickerSelect = document.getElementById("tickers");
+				for (let ticker in tickerData) {
+					const option = document.createElement("option");
+					option.value = ticker;
+					option.text = tickerData[ticker]["ticker_fullname"];
+					tickerSelect.appendChild(option);
+				}
+			}
+
+			// Update the content based on the selected ticker
+			function updateTickerInfo() {
+				const tickerSelect = document.getElementById("tickers");
+				const selectedTicker = tickerSelect.value;
+
+				if (selectedTicker) {
+					const tickerInfo = tickerData[selectedTicker];
+					for (let i = 1; i <= 3; i++) {
+						document.getElementById(`ticker-name-${i}`).innerText =
+							tickerInfo["ticker_fullname"];
+						let color = "";
+						let pctgValue = parseFloat(
+							tickerInfo["ticker_return"].replace("%", "")
+						);
+						if (pctgValue < 0) color = "has-text-danger";
+						else if (pctgValue > 0) color = "has-text-success";
+
+						document.getElementById(
+							`ticker-return-${i}`
+						).innerHTML = `Return: <span class="${color}">${tickerInfo["ticker_return"]}</span>`;
+						document.getElementById(`ticker-graph-${i}`).src =
+							tickerInfo["ticker_graph_path"];
+					}
+				} else {
+					// Clear the content if no ticker is selected
+					for (let i = 1; i <= 3; i++) {
+						document.getElementById(`ticker-name-${i}`).innerText =
+							"";
+						document.getElementById(
+							`ticker-return-${i}`
+						).innerText = "";
+						document.getElementById(`ticker-graph-${i}`).src = "";
+					}
+				}
+			}
+
+			// Call the function to load the data when the page loads
+			window.onload = loadTickerData;
+		</script>
 	</body>
 </html>

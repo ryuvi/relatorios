@@ -36,6 +36,10 @@
 				margin: 0;
 			}
 
+			.column.is-half {
+				padding: 0 10px;
+			}
+
 			.ticker-info img {
 				max-width: 100%;
 				height: auto;
@@ -48,21 +52,6 @@
 				padding: 10px;
 				text-align: center;
 				border-top: 1px solid #ddd;
-			}
-
-			.alternate-rows .column:nth-child(odd) {
-				order: 1;
-			}
-
-			.alternate-rows .column:nth-child(even) {
-				order: 2;
-			}
-
-			@media screen and (max-width: 768px) {
-				/* Para dispositivos móveis, forçar colunas para exibir uma abaixo da outra */
-				.alternate-rows .column {
-					order: unset;
-				}
 			}
 		</style>
 	</head>
@@ -90,63 +79,22 @@
 			<!-- Main Content Area -->
 			<div class="content-area">
 				<section class="section">
-					<div class="columns is-multiline alternate-rows">
-						<!-- Linha 1 - Infos do primeiro item | Gráfico do primeiro item -->
+					<div class="columns">
+						<!-- Ticker Information Column -->
 						<div class="column is-half">
-							<div id="ticker-info-1" class="ticker-info">
-								<h2 id="ticker-name-1" class="title is-3"></h2>
-								<p
-									id="ticker-return-1"
-									class="subtitle is-5"
-								></p>
-							</div>
-						</div>
-						<div class="column is-half">
-							<figure>
-								<img
-									id="ticker-graph-1"
-									src=""
-									alt="Ticker Graph 1"
-								/>
-							</figure>
-						</div>
-
-						<!-- Linha 2 - Gráfico do segundo item | Infos do segundo item -->
-						<div class="column is-half">
-							<figure>
-								<img
-									id="ticker-graph-2"
-									src=""
-									alt="Ticker Graph 2"
-								/>
-							</figure>
-						</div>
-						<div class="column is-half">
-							<div id="ticker-info-2" class="ticker-info">
-								<h2 id="ticker-name-2" class="title is-3"></h2>
-								<p
-									id="ticker-return-2"
-									class="subtitle is-5"
-								></p>
+							<div id="ticker-info" class="ticker-info">
+								<h2 id="ticker-name" class="title is-3"></h2>
+								<p id="ticker-return" class="subtitle is-5"></p>
 							</div>
 						</div>
 
-						<!-- Linha 3 - Infos do terceiro item | Gráfico do terceiro item -->
-						<div class="column is-half">
-							<div id="ticker-info-3" class="ticker-info">
-								<h2 id="ticker-name-3" class="title is-3"></h2>
-								<p
-									id="ticker-return-3"
-									class="subtitle is-5"
-								></p>
-							</div>
-						</div>
+						<!-- Graph Column -->
 						<div class="column is-half">
 							<figure>
 								<img
-									id="ticker-graph-3"
+									id="ticker-graph"
 									src=""
-									alt="Ticker Graph 3"
+									alt="Ticker Graph"
 								/>
 							</figure>
 						</div>
@@ -187,32 +135,25 @@
 
 				if (selectedTicker) {
 					const tickerInfo = tickerData[selectedTicker];
-					for (let i = 1; i <= 3; i++) {
-						document.getElementById(`ticker-name-${i}`).innerText =
-							tickerInfo["ticker_fullname"];
-						let color = "";
-						let pctgValue = parseFloat(
-							tickerInfo["ticker_return"].replace("%", "")
-						);
-						if (pctgValue < 0) color = "has-text-danger";
-						else if (pctgValue > 0) color = "has-text-success";
+					document.getElementById("ticker-name").innerText =
+						tickerInfo["ticker_fullname"];
+					let color = "";
+					let pctgValue = parseFloat(
+						tickerInfo["ticker_return"].replace("%", "")
+					);
+					if (pctgValue < 0) color = "has-text-danger";
+					else if (pctgValue > 0) color = "has-text-success";
 
-						document.getElementById(
-							`ticker-return-${i}`
-						).innerHTML = `Return: <span class="${color}">${tickerInfo["ticker_return"]}</span>`;
-						document.getElementById(`ticker-graph-${i}`).src =
-							tickerInfo["ticker_graph_path"];
-					}
+					document.getElementById(
+						"ticker-return"
+					).innerHTML = `Return: <span class="${color}">${tickerInfo["ticker_return"]}</span>`;
+					document.getElementById("ticker-graph").src =
+						tickerInfo["ticker_graph_path"];
 				} else {
 					// Clear the content if no ticker is selected
-					for (let i = 1; i <= 3; i++) {
-						document.getElementById(`ticker-name-${i}`).innerText =
-							"";
-						document.getElementById(
-							`ticker-return-${i}`
-						).innerText = "";
-						document.getElementById(`ticker-graph-${i}`).src = "";
-					}
+					document.getElementById("ticker-name").innerText = "";
+					document.getElementById("ticker-return").innerText = "";
+					document.getElementById("ticker-graph").src = "";
 				}
 			}
 
