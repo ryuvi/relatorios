@@ -1,223 +1,180 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Dashboard by ryuvi</title>
-		<link
-			href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"
-			rel="stylesheet"
-		/>
-		<style>
-			body {
-				display: flex;
-				flex-direction: column;
-				min-height: 100vh;
-			}
-
-			.main-content {
-				flex: 1;
-				display: flex;
-			}
-
-			.sidebar {
-				width: 250px;
-				background-color: #f5f5f5;
-				padding: 20px;
-				border-right: 1px solid #ddd;
-			}
-
-			.content-area {
-				flex: 1;
-				padding: 20px;
-			}
-
-			.columns {
-				margin: 0;
-			}
-
-			.ticker-info img {
-				max-width: 100%;
-				height: auto;
-				max-height: 500px;
-				object-fit: contain;
-			}
-
-			footer {
-				background-color: #f5f5f5;
-				padding: 10px;
-				text-align: center;
-				border-top: 1px solid #ddd;
-			}
-
-			.alternate-rows .column:nth-child(odd) {
-				order: 1;
-			}
-
-			.alternate-rows .column:nth-child(even) {
-				order: 2;
-			}
-
-			@media screen and (max-width: 768px) {
-				/* Para dispositivos móveis, forçar colunas para exibir uma abaixo da outra */
-				.alternate-rows .column {
-					order: unset;
-				}
-			}
-		</style>
+		<title>Email Relatório de Ativos</title>
 	</head>
-	<body>
-		<!-- Header -->
-		<header class="hero is-primary">
-			<div class="hero-body">
-				<div class="container">
-					<h1 class="title">Dashboard <small>by ryuvi</small></h1>
-				</div>
+	<body
+		style="
+			font-family: Arial, sans-serif;
+			margin: 0;
+			padding: 20px;
+			background-color: #f4f4f4;
+		"
+	>
+		<div
+			style="
+				max-width: 600px;
+				margin: 0 auto;
+				background-color: #ffffff;
+				padding: 20px;
+				border-radius: 10px;
+				border: 1px solid #ddd;
+			"
+		>
+			<h2
+				style="
+					text-align: center;
+					color: #333333;
+					background-color: #e0f7fa;
+					padding: 10px;
+					border-radius: 8px;
+					font-size: 24px;
+				"
+			>
+				Relatório de Ativos - {{ data }}
+			</h2>
+
+			<!-- Repetição das seções Ativo + Gráfico -->
+			{% for info in infos %}
+			<table
+				border="1"
+				style="
+					width: 100%;
+					border-collapse: collapse;
+					margin-bottom: 20px;
+					border-radius: 8px;
+					overflow: hidden;
+				"
+			>
+				{% if loop.index is odd %}
+				<tr>
+					<td
+						style="
+							padding: 15px;
+							background-color: #fce4ec;
+							color: #333;
+							font-size: 14px;
+							vertical-align: top;
+						"
+					>
+						<strong>Ativo:</strong> {{ info.ativo }}<br />
+						{{ info.descricao }}:
+						<span style="color: {{ info.color }};"
+							>{{ info.retorno }}</span
+						>
+					</td>
+					<td
+						style="
+							text-align: center;
+							padding: 15px;
+							background-color: #f0f4c3;
+						"
+					>
+						<img
+							src="cid:{{ info.cid_grafico }}"
+							alt="Gráfico de {{ info.ativo }}"
+							width="200"
+						/>
+					</td>
+				</tr>
+				{% else %}
+				<tr>
+					<td
+						style="
+							text-align: center;
+							padding: 15px;
+							background-color: #f0f4c3;
+						"
+					>
+						<img
+							src="cid:{{ info.cid_grafico }}"
+							alt="Gráfico de {{ info.ativo }}"
+							width="200"
+						/>
+					</td>
+					<td
+						style="
+							padding: 15px;
+							background-color: #fce4ec;
+							color: #333;
+							font-size: 14px;
+							vertical-align: top;
+						"
+					>
+						<strong>Ativo:</strong> {{ info.ativo }}<br />
+						{{ info.descricao }}:
+						<span style="color: {{ info.color }};"
+							>{{ info.retorno }}</span
+						>
+					</td>
+				</tr>
+				{% endif %}
+			</table>
+			{% endfor %}
+
+			<!-- Notícias -->
+			<div
+				style="
+					font-size: 18px;
+					color: #4a4a4a;
+					margin-top: 20px;
+					margin-bottom: 10px;
+					padding: 10px;
+					background-color: #ffecb3;
+					border-radius: 8px;
+					text-align: center;
+				"
+			>
+				Top 5 Notícias do Yahoo
 			</div>
-		</header>
+			<div
+				style="
+					font-size: 14px;
+					color: #333333;
+					background-color: #f4f4f4;
+					border-radius: 6px;
+					padding: 10px;
+				"
+			>
+				<ul style="padding-left: 20px">
+					{% for article in news %}
+					<li style="margin-bottom: 10px">
+						{{ article.title }} -
+						<a href="{{ article.link }}" style="color: #1a73e8"
+							>Leia mais</a
+						>
+					</li>
+					{% endfor %}
+				</ul>
+			</div>
 
-		<div class="main-content">
-			<!-- Sidebar -->
-			<aside class="sidebar">
-				<h2 class="title is-4">Select a Ticker</h2>
-				<div class="select is-fullwidth">
-					<select id="tickers" onchange="updateTickerInfo()">
-						<option value="">--Select a Ticker--</option>
-					</select>
-				</div>
-			</aside>
-
-			<!-- Main Content Area -->
-			<div class="content-area">
-				<section class="section">
-					<div class="columns is-multiline alternate-rows">
-						<!-- Linha 1 - Infos do primeiro item | Gráfico do primeiro item -->
-						<div class="column is-half">
-							<div id="ticker-info-1" class="ticker-info">
-								<h2 id="ticker-name-1" class="title is-3"></h2>
-								<p
-									id="ticker-return-1"
-									class="subtitle is-5"
-								></p>
-							</div>
-						</div>
-						<div class="column is-half">
-							<figure>
-								<img
-									id="ticker-graph-1"
-									src=""
-									alt="Ticker Graph 1"
-								/>
-							</figure>
-						</div>
-
-						<!-- Linha 2 - Gráfico do segundo item | Infos do segundo item -->
-						<div class="column is-half">
-							<figure>
-								<img
-									id="ticker-graph-2"
-									src=""
-									alt="Ticker Graph 2"
-								/>
-							</figure>
-						</div>
-						<div class="column is-half">
-							<div id="ticker-info-2" class="ticker-info">
-								<h2 id="ticker-name-2" class="title is-3"></h2>
-								<p
-									id="ticker-return-2"
-									class="subtitle is-5"
-								></p>
-							</div>
-						</div>
-
-						<!-- Linha 3 - Infos do terceiro item | Gráfico do terceiro item -->
-						<div class="column is-half">
-							<div id="ticker-info-3" class="ticker-info">
-								<h2 id="ticker-name-3" class="title is-3"></h2>
-								<p
-									id="ticker-return-3"
-									class="subtitle is-5"
-								></p>
-							</div>
-						</div>
-						<div class="column is-half">
-							<figure>
-								<img
-									id="ticker-graph-3"
-									src=""
-									alt="Ticker Graph 3"
-								/>
-							</figure>
-						</div>
-					</div>
-				</section>
+			<!-- Rodapé -->
+			<div
+				style="
+					font-size: 12px;
+					color: #888888;
+					text-align: center;
+					padding-top: 10px;
+					border-top: 1px solid #ddd;
+					margin-top: 20px;
+					background-color: #e1bee7;
+					border-radius: 6px;
+					padding: 15px;
+				"
+			>
+				<p>Relatório gerado com ❤️ por {{ autor }}</p>
+				<p>
+					<a href="{{ url_cancelamento }}" style="color: #1a73e8"
+						>Cancelar assinatura</a
+					>
+					|
+					<a href="{{ url_relatorio }}" style="color: #1a73e8"
+						>Ver relatório completo</a
+					>
+				</p>
 			</div>
 		</div>
-
-		<!-- Footer -->
-		<footer>
-			<div class="content has-text-centered">
-				<p>Created with ❤️ by ryuvi</p>
-			</div>
-		</footer>
-
-		<script>
-			let tickerData = {};
-
-			// Load the ticker data from the JSON file
-			async function loadTickerData() {
-				const response = await fetch("ticker_data.json");
-				tickerData = await response.json();
-
-				// Populate the combobox with ticker options
-				const tickerSelect = document.getElementById("tickers");
-				for (let ticker in tickerData) {
-					const option = document.createElement("option");
-					option.value = ticker;
-					option.text = tickerData[ticker]["ticker_fullname"];
-					tickerSelect.appendChild(option);
-				}
-			}
-
-			// Update the content based on the selected ticker
-			function updateTickerInfo() {
-				const tickerSelect = document.getElementById("tickers");
-				const selectedTicker = tickerSelect.value;
-
-				if (selectedTicker) {
-					const tickerInfo = tickerData[selectedTicker];
-					for (let i = 1; i <= 3; i++) {
-						document.getElementById(`ticker-name-${i}`).innerText =
-							tickerInfo["ticker_fullname"];
-						let color = "";
-						let pctgValue = parseFloat(
-							tickerInfo["ticker_return"].replace("%", "")
-						);
-						if (pctgValue < 0) color = "has-text-danger";
-						else if (pctgValue > 0) color = "has-text-success";
-
-						document.getElementById(
-							`ticker-return-${i}`
-						).innerHTML = `Return: <span class="${color}">${tickerInfo["ticker_return"]}</span>`;
-						document.getElementById(`ticker-graph-${i}`).src =
-							tickerInfo["ticker_graph_path"];
-					}
-				} else {
-					// Clear the content if no ticker is selected
-					for (let i = 1; i <= 3; i++) {
-						document.getElementById(`ticker-name-${i}`).innerText =
-							"";
-						document.getElementById(
-							`ticker-return-${i}`
-						).innerText = "";
-						document.getElementById(`ticker-graph-${i}`).src = "";
-					}
-				}
-			}
-
-			// Call the function to load the data when the page loads
-			window.onload = loadTickerData;
-		</script>
 	</body>
 </html>
