@@ -59,6 +59,11 @@ def generate_graphs(
         plt.close(fig)
 
 
+async def send_telegram_message(api_token, chat_id, text):
+    application = Bot(token=api_token)
+    await application.send_message(chat_id=chat_id, text=text)
+
+
 def send_email(
     subject: str,
     html_content: str,
@@ -96,8 +101,7 @@ def send_email(
         chat_id = os.getenv("CHAT_ID")
 
         # Inicializa o bot
-        application = Bot(token=api_token)
-        application.send_message(chat_id=chat_id, text=message)
+        send_telegram_message(api_token, chat_id, message)
     except Exception as e:
         print(f"Error sending message: {e}")
 
