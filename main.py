@@ -47,7 +47,7 @@ def generate_graphs(
 
     # Ajustar os dados para o último mês
     data.index = data.index.tz_localize(None)
-    data_start = datetime.utcnow() - timedelta(days=31)
+    data_start = datetime.now() - timedelta(days=31)
     temp_data = data.loc[data.index >= data_start]
 
     for ticker in tickers:
@@ -161,12 +161,25 @@ def load_tickers_from_yaml(yaml_file: str) -> List[str]:
         return yaml.safe_load(file).get("tickers", [])
 
 
-def generate_message(date: str, tickets: List[str], returns: Dict[str, str]):
-    message = f"*** Relatório {date} ***"
+def generate_message(
+    date: str, tickers: List[str], returns: Dict[str, str], market_data: pd.DataFrame
+) -> str:
+    message = f"*** Relatório {date} ***\n"
 
-    for ticker in tickets:
+    data_start = datetime.now() - timedelta(days=2)
+    data = market_data.iloc[market_data.index > data_start]
+
+    for ticker in tickers:
+        # Fechamento de hoje (última linha de market_data)
+        today_close = market_data[ticker].iloc[-1]
+
+        # Fechamento do dia anterior (penúltima linha de market_data)
+        yesterday_close = market_data[ticker].iloc[-2]
+
         message += f"Ativo: {ticker}\n"
-        message += f'\tRetorno: {returns.get("ticker")}\n\n'
+        message += f"\t- Retorno: {returns[ticker]}\n"
+        message += f"\t- Fechamento de Hoje: {today_close:.2f}\n"
+        message += f"\t- Fechamento de Ontem: {yesterday_close:.2f}\n\n"
 
     return message
 
@@ -195,7 +208,7 @@ def main() -> None:
     html_content = template.render(data_dict)
 
     # Gerar mensagem do telegram
-    message = generate_message(data_dict["data"], tickers, returns)
+    message = generate_message(data_dict["data"], tickers, returns, market_data)
 
     # Definir detalhes do email e enviar
     subject = f"Relatório da bolsa do dia {data_dict['data']}"
