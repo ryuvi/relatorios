@@ -10,96 +10,53 @@ import pathlib
 import requests
 from bs4 import BeautifulSoup
 import mplcyberpunk
-from typing import List, Tuple, Dict
 import yaml
 from datetime import datetime, timedelta
 import os
 import json
+from telegram.ext import Updater, JobQueue, CommandHandler, Application
+from telegram import Bot
+from typing import List, Tuple, Dict
+
+
+# Funções Auxiliares
 
 
 def take_data(tickers: List[str]) -> Tuple[pd.DataFrame, Dict[str, str]]:
     """
     Downloads and processes market data for the provided tickers using yfinance.
-
-    Args:
-        tickers (List[str]): List of tickers to download market data for.
-
-    Returns:
-        Tuple[pd.DataFrame, Dict[str, str]]: DataFrame of the market data and a dictionary of returns for each ticker.
     """
-    market_data = yf.download(tickers, period="6mo")
-    market_data = market_data["Adj Close"].dropna()
-
-    # Calculate daily returns
+    market_data = yf.download(tickers, period="6mo")["Adj Close"].dropna()
     daily_returns = market_data.pct_change()
 
-    returns = {}
-    for ticker in tickers:
-        returns[ticker] = f"{round(daily_returns[ticker].iloc[-1] * 100, 2)}%"
+    returns = {
+        ticker: f"{round(daily_returns[ticker].iloc[-1] * 100, 2)}%"
+        for ticker in tickers
+    }
 
     return market_data, returns
 
 
-def generate_graphs(data: pd.DataFrame, tickers: List[str]) -> None:
+def generate_graphs(
+    data: pd.DataFrame, tickers: List[str], graph_dir: pathlib.Path
+) -> None:
     """
     Generates and saves line graphs for each ticker in the provided data.
-
-    Args:
-        data (pd.DataFrame): The market data.
-        tickers (List[str]): List of tickers to generate graphs for.
-
-    Returns:
-        None
     """
-    graph_path = pathlib.Path("graphs")
-    graph_path.mkdir(exist_ok=True)
-    publish_path = pathlib.Path("docs/images")
-    publish_path.mkdir(exist_ok=True)
-
     plt.style.use("cyberpunk")
 
-    temp_data = data
-    temp_data.index = temp_data.index.tz_localize(None)
+    # Ajustar os dados para o último mês
+    data.index = data.index.tz_localize(None)
     data_start = datetime.utcnow() - timedelta(days=31)
-    temp_data = temp_data.loc[temp_data.index >= data_start]
+    temp_data = data.loc[data.index >= data_start]
 
     for ticker in tickers:
         fig, ax = plt.subplots(figsize=(16, 16))
         ax.plot(temp_data[ticker])
         ax.set_title(ticker)
-        if ticker in ("^BVSP", "^GSPC", "BRL=X"):
-            plt.savefig(graph_path.joinpath(f"{ticker.lower()}.png"), dpi=300)
-        plt.savefig(publish_path.joinpath(f"{ticker.lower()}.png"), dpi=300)
+        plt.savefig(graph_dir.joinpath(f"{ticker.lower()}.png"), dpi=300)
         plt.clf()
         plt.close(fig)
-
-
-def get_news() -> List[Dict[str, str]]:
-    """
-    Fetches the top 5 financial news from Yahoo Finance RSS feed.
-
-    Returns:
-        List[Dict[str, str]]: A list of dictionaries containing news title, link, and image URL.
-    """
-    url = "https://finance.yahoo.com/news/rssindex"
-    page = requests.get(url)
-    soup = BeautifulSoup(page.content, "lxml-xml")
-    all_news = soup.find_all("item")[:5]
-
-    formatted_news = []
-    for news in all_news:
-        formatted_news.append(
-            {
-                "title": news.find("title").text,
-                "link": news.find("link").text,
-                "image": (
-                    news.find("media:content")["url"]
-                    if news.find("media:content")
-                    else ""
-                ),
-            }
-        )
-    return formatted_news
 
 
 def send_email(
@@ -108,19 +65,10 @@ def send_email(
     image_paths: List[str],
     image_cids: List[str],
     recipients: List[str],
+    message: str,
 ) -> None:
     """
     Sends an email with the specified subject, HTML content, and attached images.
-
-    Args:
-        subject (str): Email subject.
-        html_content (str): HTML content of the email.
-        image_paths (List[str]): Paths to image files.
-        image_cids (List[str]): Corresponding CIDs for inline images.
-        recipients (List[str]): List of recipient email addresses.
-
-    Returns:
-        None
     """
     msg = MIMEMultipart("related")
     msg["Subject"] = subject
@@ -130,67 +78,49 @@ def send_email(
 
     for image_path, cid in zip(image_paths, image_cids):
         with open(image_path, "rb") as img_file:
-            img_data = img_file.read()
-        image = MIMEImage(img_data)
+            image = MIMEImage(img_file.read())
         image.add_header("Content-ID", f"<{cid}>")
         msg.attach(image)
 
-    # Try to retrieve secret
     try:
         SOME_SECRET = os.environ["SOME_SECRET"]
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp_server:
-            smtp_server.login(
-                "vicenters10@gmail.com", SOME_SECRET
-            )  # Insert your password here
+            smtp_server.login("vicenters10@gmail.com", SOME_SECRET)
             smtp_server.sendmail("vicenters10@gmail.com", recipients, msg.as_string())
     except Exception as e:
-        print(f"An error ocurred:\n{e}")
+        print(f"Error sending email: {e}")
+
+    try:
+        # Configurações do Telegram
+        api_token = os.getenv("TELEGRAM_API_TOKEN")  # Insira o token do bot
+        chat_id = os.getenv("CHAT_ID")
+
+        # Inicializa o bot
+        application = Bot(token=api_token)
+        application.send_message(chat_id=chat_id, text=message)
+    except Exception as e:
+        print(f"Error sending message: {e}")
 
 
 def get_ticker_name(ticker: str) -> str:
     """
     Gets the full name of the asset from a given ticker symbol.
-
-    Args:
-        ticker (str): The ticker symbol.
-
-    Returns:
-        str: The full name of the asset.
     """
-    ticker_data = yf.Ticker(ticker)
-    info = ticker_data.info
-    return info.get("longName", ticker)
+    return yf.Ticker(ticker).info.get("longName", ticker)
 
 
-def generate_data_dict(
-    tickers: List[str], returns: Dict[str, str], news: List[Dict[str, str]]
-) -> Dict:
+def generate_data_dict(tickers: List[str], returns: Dict[str, str]) -> Dict:
     """
     Generates the dictionary to be used for email template rendering.
-
-    Args:
-        tickers (List[str]): List of tickers.
-        returns (Dict[str, str]): Dictionary with the returns of each ticker.
-        news (List[Dict[str, str]]): List of news articles.
-
-    Returns:
-        Dict: The data dictionary used for the template.
     """
     data_dict = {
         "data": datetime.now().strftime("%d/%m/%Y"),
         "infos": [],
-        "news": news,
-        "autor": "Ryuvi",
-        "url_cancelamento": "URL_CANCELAMENTO",
-        "url_relatorio": "URL_RELATORIO",
     }
 
     for ticker in tickers:
-        if ticker not in ("^BVSP", "^GSPC", "BRL=X"):
-            continue
-        ticker_name = get_ticker_name(ticker)
         info = {
-            "ativo": ticker_name,
+            "ativo": get_ticker_name(ticker),
             "descricao": f"O retorno do {ticker} foi",
             "retorno": returns[ticker],
             "color": "green" if float(returns[ticker].replace("%", "")) > 0 else "red",
@@ -201,102 +131,78 @@ def generate_data_dict(
     return data_dict
 
 
-def generate_data_json(tickers: List[str], returns: Dict[str, str]) -> None:
+def generate_data_json(
+    tickers: List[str],
+    returns: Dict[str, str],
+    output_path: str = "docs/ticker_data.json",
+) -> None:
     """
-    Generates a dictionary with the necessary data and saves it as a JSON file.
-
-    Args:
-        tickers (List[str]): List of tickers.
-        returns (Dict[str, str]): Dictionary with the returns of each ticker.
-
-    Returns:
-        None
+    Generates a JSON file with ticker data.
     """
-    data = {}
-
-    for ticker in tickers:
-        ticker_name = get_ticker_name(ticker)
-        info = {
+    data = {
+        ticker: {
             "ticker": ticker,
-            "ticker_fullname": ticker_name,
+            "ticker_fullname": get_ticker_name(ticker),
             "ticker_graph_path": f"../graphs/{ticker.lower()}.png",
             "ticker_return": returns[ticker],
         }
-        data[ticker] = info
+        for ticker in tickers
+    }
 
-    # Save the data as a JSON file
-    with open("docs/ticker_data.json", "w") as json_file:
+    with open(output_path, "w") as json_file:
         json.dump(data, json_file)
 
 
 def load_tickers_from_yaml(yaml_file: str) -> List[str]:
     """
     Loads the list of tickers from a YAML file.
-
-    Args:
-        yaml_file (str): Path to the YAML file.
-
-    Returns:
-        List[str]: List of tickers.
     """
     with open(yaml_file, "r") as file:
-        data = yaml.safe_load(file)
-        return data.get("tickers", [])
+        return yaml.safe_load(file).get("tickers", [])
 
 
-def send_notification() -> None:
-    """
-    Function used to send notfication to cell phone
+def generate_message(date: str, tickets: List[str], returns: Dict[str, str]):
+    message = f"*** Relatório {date} ***"
 
-    Returns:
-        None
-    """
-    requests.post(
-        "https://api.mynotifier.app/",
-        {
-            "apiKey": os.environ["NOTIFIER_KEY"],
-            "message": "New Report Available!",
-            "description": "A new report was generated, please see your email!",
-            "type": "success",
-        },
-    )
+    for ticker in tickets:
+        message += f"Ativo: {ticker}\n"
+        message += f'\tRetorno: {returns.get("ticker")}\n\n'
+
+    return message
 
 
+# Função Principal
 def main() -> None:
     """
     Main function to process data, generate graphs, get news, and send an email report.
-
-    Returns:
-        None
     """
-    # Define the list of tickers
-    files = os.listdir(".")
-    target_file = "tickers.yaml"
-    tickers = load_tickers_from_yaml(files[files.index(target_file)])
+    # Carregar tickers
+    tickers = load_tickers_from_yaml(pathlib.Path("src/tickers.yaml"))
 
-    # Fetch data and generate graphs
+    # Obter dados e gerar gráficos
     market_data, returns = take_data(tickers)
-    generate_graphs(market_data, tickers)
-    news = get_news()
+    graph_dir = pathlib.Path("graphs")
+    graph_dir.mkdir(exist_ok=True)
+    generate_graphs(market_data, tickers, graph_dir)
 
-    # Prepare data for the email template
-    data_dict = generate_data_dict(tickers, returns, news)
-
+    # Preparar os dados para o email
+    data_dict = generate_data_dict(tickers, returns)
     generate_data_json(tickers, returns)
 
-    # Render HTML template
+    # Renderizar template HTML
     env = Environment(loader=FileSystemLoader("."))
     template = env.get_template("index.html")
     html_content = template.render(data_dict)
 
-    # Define email details and send the email
+    # Gerar mensagem do telegram
+    message = generate_message(data_dict["data"], tickers, returns)
+
+    # Definir detalhes do email e enviar
     subject = f"Relatório da bolsa do dia {data_dict['data']}"
     recipients = ["vicenters10@gmail.com"]
     image_paths = [f"graphs/{ticker.lower()}.png" for ticker in tickers]
     image_cids = [f"{ticker.lower()}.png" for ticker in tickers]
-
-    send_email(subject, html_content, image_paths, image_cids, recipients)
-    send_notification()
+    send_email(subject, html_content, image_paths, image_cids, recipients, message)
 
 
 if __name__ == "__main__":
