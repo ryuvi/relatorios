@@ -64,7 +64,7 @@ async def send_telegram_message(api_token, chat_id, text):
     await application.send_message(chat_id=chat_id, text=text)
 
 
-def send_email(
+async def send_email(
     subject: str,
     html_content: str,
     image_paths: List[str],
@@ -101,7 +101,7 @@ def send_email(
         chat_id = os.getenv("CHAT_ID")
 
         # Inicializa o bot
-        send_telegram_message(api_token, chat_id, message)
+        await send_telegram_message(api_token, chat_id, message)
     except Exception as e:
         print(f"Error sending message: {e}")
 
